@@ -1,0 +1,18 @@
+# Python
+backend/.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/.env
+backend/temp_uploads/
+
+# .NET
+frontend/bin/
+frontend/obj/
+
+# IDE
+.idea/
+frontend/.idea/
+.vs/
+
+# Database
+database/*.db
