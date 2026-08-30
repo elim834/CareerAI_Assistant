@@ -1,9 +1,17 @@
 ﻿<Window x:Class="frontend.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:conv="clr-namespace:frontend.Converters"
         Title="CareerAI Assistant" Height="600" Width="1100">
+    
+    <Window.Resources>
+        <conv:UrgencyColorConverter x:Key="UrgencyColorConverter"/>
+    </Window.Resources>
+    
     <Grid Margin="15">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -30,11 +38,33 @@
             <Button x:Name="ScanUrlButton" Content="Scan URL"
                     Padding="10,5" Click="ScanUrlButton_Click"/>
         </StackPanel>
+        
+        <Button x:Name="ExportButton" Content="Export to Excel" Grid.Row="3"
+                Padding="10,5" Margin="0,0,0,10" HorizontalAlignment="Left"
+                Click="ExportButton_Click"/>
+        
+        <Button x:Name="KanbanButton" Content="Kanban View" Grid.Row="3"
+                Padding="10,5" Margin="120,0,0,10" HorizontalAlignment="Left"
+                Click="KanbanButton_Click"/>
 
-        <DataGrid x:Name="ApplicationsGrid" Grid.Row="3"
+        <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,0,0,10">
+            <Button x:Name="ShowAllButton" Content="All" Padding="10,5" Margin="0,0,5,0"
+                    Click="ShowAllButton_Click"/>
+            <Button x:Name="ShowMastersButton" Content="Master's Programs" Padding="10,5" Margin="0,0,5,0"
+                    Click="ShowMastersButton_Click"/>
+            <Button x:Name="ShowInternshipsButton" Content="Internships" Padding="10,5"
+                    Click="ShowInternshipsButton_Click"/>
+        </StackPanel>
+        
+        <DataGrid x:Name="ApplicationsGrid" Grid.Row="5"
                   AutoGenerateColumns="False" IsReadOnly="True"
                   CanUserAddRows="False"
                   MouseDoubleClick="ApplicationsGrid_MouseDoubleClick">
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow">
+                    <Setter Property="Background" Value="{Binding DaysLeft, Converter={StaticResource UrgencyColorConverter}}"/>
+                </Style>
+            </DataGrid.RowStyle>
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Country" Binding="{Binding Country}" Width="80"/>
                 <DataGridTextColumn Header="University" Binding="{Binding University}" Width="180"/>
@@ -43,6 +73,7 @@
                 <DataGridTextColumn Header="Tuition" Binding="{Binding Tuition}" Width="180"/>
                 <DataGridTextColumn Header="TOEFL" Binding="{Binding ToeflRequirement}" Width="60"/>
                 <DataGridTextColumn Header="Deadline" Binding="{Binding Deadline}" Width="90"/>
+                <DataGridTextColumn Header="Days Left" Binding="{Binding DaysLeftDisplay}" Width="90"/>
                 <DataGridTextColumn Header="Visa" Binding="{Binding VisaCountry}" Width="80"/>
                 <DataGridTextColumn Header="Score" Binding="{Binding AcceptanceScore}" Width="60"/>
                 <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="80"/>

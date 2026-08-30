@@ -86,5 +86,30 @@ namespace frontend.Services
             var response = await _http.PostAsJsonAsync("/scan-url", payload);
             return await response.Content.ReadAsStringAsync();
         }
-    }
+        
+        public async Task<bool> UpdateSubRoleAsync(int applicationId, string subRole)
+        {
+            var payload = new { sub_role = subRole };
+            var response = await _http.PatchAsJsonAsync($"/applications/{applicationId}/sub-role", payload);
+            return response.IsSuccessStatusCode;
+        }
+        
+        public async Task<bool> UpdateStatusAsync(int applicationId, string status)
+        {
+            var payload = new { status = status };
+            var response = await _http.PatchAsJsonAsync($"/applications/{applicationId}/status", payload);
+            return response.IsSuccessStatusCode;
+        }
+        
+        public async Task<CoverLetterDto?> GenerateCoverLetterAsync(int applicationId, string? facultyQuery = null)
+        {
+            var payload = new { faculty_query = facultyQuery };
+            var response = await _http.PostAsJsonAsync($"/cover-letter/{applicationId}", payload);
+            if (!response.IsSuccessStatusCode)
+                return null;
+
+            var json = await response.Content.ReadAsStringAsync();
+            var result = JsonSerializer.Deserialize<CoverLetterResponse>(json, _jsonOptions);
+            return result?.Letter;
+        }    }
 }

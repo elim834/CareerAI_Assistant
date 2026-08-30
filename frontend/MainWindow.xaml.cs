@@ -1,11 +1,15 @@
 ﻿using System.Windows;
 using Microsoft.Win32;
 using frontend.Services;
+using ClosedXML.Excel;
+using System.Linq;
+
 namespace frontend
 {
     public partial class MainWindow : Window
     {
         private readonly ApiClient _api = new ApiClient();
+        private List<frontend.Models.ApplicationDto> _allApplications = new();
 
         public MainWindow()
         {
@@ -25,6 +29,7 @@ namespace frontend
                 }
 
                 var applications = await _api.GetApplicationsAsync();
+                _allApplications = applications;
                 StatusText.Text = $"✅ Connected. {applications.Count} application(s) found.";
                 ApplicationsGrid.ItemsSource = applications;
             }
@@ -33,6 +38,7 @@ namespace frontend
                 StatusText.Text = $"❌ Startup error: {ex.Message}";
             }
         }
+        
         private async void ApplicationsGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
             if (ApplicationsGrid.SelectedItem is not frontend.Models.ApplicationDto selected)
@@ -43,22 +49,12 @@ namespace frontend
                 StatusText.Text = $"Analyzing \"{selected.Program}\"...";
 
                 var analysis = await _api.AnalyzeApplicationAsync(selected.Id);
-                if (analysis == null)
-                {
-                    StatusText.Text = "❌ Analysis failed. Check backend logs.";
-                    return;
-                }
 
-                MessageBox.Show(
-                    $"Score: {analysis.AcceptanceScore}/10\n\n" +
-                    $"Reasoning: {analysis.Reasoning}\n\n" +
-                    $"Visa: {analysis.VisaSummary}\n\n" +
-                    $"Suggested focus: {analysis.SuggestedFocus}",
-                    $"Analysis — {selected.University}",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                var detailWindow = new DetailWindow(selected, analysis, _api) { Owner = this };
+                detailWindow.ShowDialog();
 
                 var applications = await _api.GetApplicationsAsync();
+                _allApplications = applications;
                 ApplicationsGrid.ItemsSource = applications;
                 StatusText.Text = $"✅ Connected. {applications.Count} application(s) found.";
             }
@@ -67,6 +63,7 @@ namespace frontend
                 StatusText.Text = $"❌ Analysis failed: {ex.Message}";
             }
         }        
+        
         private async void UploadTranscriptButton_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new OpenFileDialog { Filter = "PDF files (*.pdf)|*.pdf" };
@@ -83,6 +80,7 @@ namespace frontend
                 StatusText.Text = $"❌ Upload failed: {ex.Message}";
             }
         }
+        
         private async void UploadCvButton_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new OpenFileDialog { Filter = "PDF files (*.pdf)|*.pdf" };
@@ -98,7 +96,8 @@ namespace frontend
             {
                 StatusText.Text = $"❌ Upload failed: {ex.Message}";
             }
-        }        
+        }    
+        
         private async void ScanUrlButton_Click(object sender, RoutedEventArgs e)
         {
             string url = ScanUrlTextBox.Text.Trim();
@@ -116,6 +115,7 @@ namespace frontend
                 await _api.ScanUrlAsync(url);
 
                 var applications = await _api.GetApplicationsAsync();
+                _allApplications = applications;
                 ApplicationsGrid.ItemsSource = applications;
                 StatusText.Text = $"✅ Scan complete. {applications.Count} application(s) total.";
                 ScanUrlTextBox.Text = "";
@@ -128,5 +128,97 @@ namespace frontend
             {
                 ScanUrlButton.IsEnabled = true;
             }
-        }    }
+        }
+        
+        private void ExportButton_Click(object sender, RoutedEventArgs e)
+{
+    if (ApplicationsGrid.ItemsSource is not System.Collections.Generic.List<frontend.Models.ApplicationDto> applications
+        || applications.Count == 0)
+    {
+        StatusText.Text = "⚠️ No data to export.";
+        return;
+    }
+
+    var saveDialog = new SaveFileDialog
+    {
+        Filter = "Excel files (*.xlsx)|*.xlsx",
+        FileName = "CareerAI_Applications.xlsx"
+    };
+    if (saveDialog.ShowDialog() != true) return;
+
+    try
+    {
+        using var workbook = new XLWorkbook();
+        var sheet = workbook.Worksheets.Add("Applications");
+
+        string[] headers = { "Country", "University", "Program", "Scholarship", "Tuition",
+            "GPA Req.", "TOEFL Req.", "Deadline", "Visa Country", "Sub Role",
+            "Score", "Status", "Notes" };
+
+        for (int i = 0; i < headers.Length; i++)
+            sheet.Cell(1, i + 1).Value = headers[i];
+
+        int row = 2;
+        foreach (var app in applications)
+        {
+            sheet.Cell(row, 1).Value = app.Country ?? "";
+            sheet.Cell(row, 2).Value = app.University ?? "";
+            sheet.Cell(row, 3).Value = app.Program ?? "";
+            sheet.Cell(row, 4).Value = app.ScholarshipAmount ?? "";
+            sheet.Cell(row, 5).Value = app.Tuition ?? "";
+            sheet.Cell(row, 6).Value = app.GpaRequirement?.ToString() ?? "";
+            sheet.Cell(row, 7).Value = app.ToeflRequirement?.ToString() ?? "";
+            sheet.Cell(row, 8).Value = app.Deadline ?? "";
+            sheet.Cell(row, 9).Value = app.VisaCountry ?? "";
+            sheet.Cell(row, 10).Value = app.SubRole ?? "";
+            sheet.Cell(row, 11).Value = app.AcceptanceScore?.ToString() ?? "";
+            sheet.Cell(row, 12).Value = app.Status ?? "";
+            sheet.Cell(row, 13).Value = app.Notes ?? "";
+            row++;
+        }
+
+        sheet.Columns().AdjustToContents();
+        workbook.SaveAs(saveDialog.FileName);
+
+        StatusText.Text = $"✅ Exported {applications.Count} application(s) to Excel.";
+    }
+    catch (Exception ex)
+    {
+        StatusText.Text = $"❌ Export failed: {ex.Message}";
+    }
+}
+        
+        private void KanbanButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (ApplicationsGrid.ItemsSource is not List<frontend.Models.ApplicationDto> applications)
+            {
+                StatusText.Text = "⚠️ No data loaded yet.";
+                return;
+            }
+
+            var kanban = new KanbanWindow(_api, applications) { Owner = this };
+            kanban.ShowDialog();
+        }
+
+        private void ShowAllButton_Click(object sender, RoutedEventArgs e)
+        {
+            ApplicationsGrid.ItemsSource = _allApplications;
+        }
+
+        private void ShowMastersButton_Click(object sender, RoutedEventArgs e)
+        {
+            ApplicationsGrid.ItemsSource = _allApplications
+                .Where(a => a.ApplicationType == "masters" || a.ApplicationType == null)
+                .ToList();
+        }
+
+        private void ShowInternshipsButton_Click(object sender, RoutedEventArgs e)
+        {
+            ApplicationsGrid.ItemsSource = _allApplications
+                .Where(a => a.ApplicationType == "internship")
+                .ToList();
+        }
+        
+        
+    }
 }

@@ -16,5 +16,30 @@
         public double? AcceptanceScore { get; set; }
         public string? Status { get; set; }
         public string? Notes { get; set; }
+        public string? LabFitParagraph { get; set; }
+        public string? LanguageRequirementStatus { get; set; }
+        public string? ApplicationType { get; set; }
+
+        // Computed, not from JSON — used for countdown display and color coding
+        public int? DaysLeft
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(Deadline)) return null;
+                if (!DateTime.TryParse(Deadline, out var deadlineDate)) return null;
+                return (deadlineDate.Date - DateTime.Today).Days;
+            }
+        }
+
+        public string DaysLeftDisplay
+        {
+            get
+            {
+                if (DaysLeft == null) return "—";
+                if (DaysLeft < 0) return "Passed";
+                if (DaysLeft == 0) return "Today!";
+                return $"{DaysLeft} day(s)";
+            }
+        }
     }
 }

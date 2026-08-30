@@ -39,13 +39,27 @@ def init_db():
     """)
 
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS profiles (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            gpa REAL,
-            courses TEXT,
-            cv_summary TEXT
-        )
-    """)
+                   CREATE TABLE IF NOT EXISTS profiles
+                   (
+                       id
+                       INTEGER
+                       PRIMARY
+                       KEY
+                       AUTOINCREMENT,
+                       gpa
+                       REAL,
+                       courses
+                       TEXT,
+                       cv_summary
+                       TEXT,
+                       education_language
+                       TEXT,
+                       toefl_score
+                       REAL,
+                       ielts_score
+                       REAL
+                   )
+                   """)
 
     conn.commit()
     conn.close()
@@ -60,9 +74,8 @@ def add_application(data: dict) -> int:
     expected_fields = [
         "country", "university", "program", "scholarship_amount", "tuition",
         "gpa_requirement", "toefl_requirement", "deadline", "visa_country",
-        "sub_role", "acceptance_score", "notes",
+        "sub_role", "acceptance_score", "notes", "application_type",
     ]
-
     safe_data = {}
     for field in expected_fields:
         value = data.get(field)
@@ -73,32 +86,64 @@ def add_application(data: dict) -> int:
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO applications
-        (country, university, program, scholarship_amount, tuition, gpa_requirement,
-         toefl_requirement, deadline, visa_country, sub_role, acceptance_score, notes)
-        VALUES (:country, :university, :program, :scholarship_amount, :tuition, :gpa_requirement,
-                :toefl_requirement, :deadline, :visa_country, :sub_role, :acceptance_score, :notes)
-    """, safe_data)
+                   INSERT INTO applications
+                   (country, university, program, scholarship_amount, tuition, gpa_requirement,
+                    toefl_requirement, deadline, visa_country, sub_role, acceptance_score, notes, application_type)
+                   VALUES (:country, :university, :program, :scholarship_amount, :tuition, :gpa_requirement,
+                           :toefl_requirement, :deadline, :visa_country, :sub_role, :acceptance_score, :notes,
+                           :application_type)
+                   """, safe_data)
     conn.commit()
     new_id = cursor.lastrowid
     conn.close()
     return new_id
-def save_profile(gpa: float | None, courses: list[str], cv_summary: str = "") -> int:
-    """Inserts a new profile row, returns the new row's id."""
+
+def save_profile(gpa: float | None, courses: list[str], cv_summary: str = "",
+                  education_language: str | None = None, toefl_score: float | None = None,
+                  ielts_score: float | None = None) -> int:
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT id FROM profiles WHERE id = 1")
+    existing = cursor.fetchone()
+
+    if existing:
+        cursor.execute("""
+            UPDATE profiles SET gpa = :gpa, courses = :courses
+            WHERE id = 1
+        """, {"gpa": gpa, "courses": ", ".join(courses)})
+        profile_id = 1
+    else:
+        cursor.execute("""
+            INSERT INTO profiles (id, gpa, courses, cv_summary)
+            VALUES (1, :gpa, :courses, :cv_summary)
+        """, {"gpa": gpa, "courses": ", ".join(courses), "cv_summary": cv_summary})
+        profile_id = 1
+
+    conn.commit()
+    conn.close()
+    return profile_id
+
+def update_profile_language_info(profile_id: int, education_language: str | None = None,
+                                   toefl_score: float | None = None,
+                                   ielts_score: float | None = None) -> None:
+    """Updates language-related fields on the profile."""
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO profiles (gpa, courses, cv_summary)
-        VALUES (:gpa, :courses, :cv_summary)
+        UPDATE profiles
+        SET education_language = COALESCE(:education_language, education_language),
+            toefl_score = COALESCE(:toefl_score, toefl_score),
+            ielts_score = COALESCE(:ielts_score, ielts_score)
+        WHERE id = :id
     """, {
-        "gpa": gpa,
-        "courses": ", ".join(courses),
-        "cv_summary": cv_summary,
+        "education_language": education_language,
+        "toefl_score": toefl_score,
+        "ielts_score": ielts_score,
+        "id": profile_id,
     })
     conn.commit()
-    new_id = cursor.lastrowid
     conn.close()
-    return new_id
 
 def get_all_applications() -> list[dict]:
     """Returns all applications as a list of dicts."""
@@ -108,6 +153,7 @@ def get_all_applications() -> list[dict]:
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
+
 def get_latest_profile() -> dict | None:
     """Returns the most recently added profile, or None if none exist."""
     conn = get_connection()
@@ -117,7 +163,6 @@ def get_latest_profile() -> dict | None:
     conn.close()
     return dict(row) if row else None
 
-
 def get_application_by_id(app_id: int) -> dict | None:
     """Returns a single application row by id, or None if not found."""
     conn = get_connection()
@@ -126,7 +171,6 @@ def get_application_by_id(app_id: int) -> dict | None:
     row = cursor.fetchone()
     conn.close()
     return dict(row) if row else None
-
 
 def update_application_analysis(app_id: int, acceptance_score: float, notes: str) -> None:
     """Writes the analyst's score and reasoning back onto an existing application row."""
@@ -150,7 +194,6 @@ def update_profile_cv_summary(profile_id: int, cv_summary: str) -> None:
     conn.commit()
     conn.close()
 
-
 def delete_application(app_id: int) -> None:
     """Deletes a single application row by id."""
     conn = get_connection()
@@ -158,3 +201,75 @@ def delete_application(app_id: int) -> None:
     cursor.execute("DELETE FROM applications WHERE id = ?", (app_id,))
     conn.commit()
     conn.close()
+
+def update_application_status(app_id: int, status: str) -> None:
+    """Updates just the status field of an application."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE applications SET status = :status WHERE id = :id",
+                    {"status": status, "id": app_id})
+    conn.commit()
+    conn.close()
+
+def update_application_sub_role(app_id: int, sub_role: str) -> None:
+    """Updates just the sub_role field of an application."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE applications SET sub_role = :sub_role WHERE id = :id",
+                    {"sub_role": sub_role, "id": app_id})
+    conn.commit()
+    conn.close()
+
+def log_api_call(provider: str, endpoint: str) -> None:
+    """Records one API call for budget tracking purposes."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO api_usage (provider, endpoint) VALUES (:provider, :endpoint)",
+                    {"provider": provider, "endpoint": endpoint})
+    conn.commit()
+    conn.close()
+
+def get_today_call_count(provider: str) -> int:
+    """Returns how many calls to a given provider happened today (local date)."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT COUNT(*) as count FROM api_usage
+        WHERE provider = :provider AND date(timestamp) = date('now', 'localtime')
+    """, {"provider": provider})
+    row = cursor.fetchone()
+    conn.close()
+    return row["count"] if row else 0
+
+def get_usage_summary() -> dict:
+    """Returns today's call counts broken down by provider."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT provider, COUNT(*) as count FROM api_usage
+        WHERE date(timestamp) = date('now', 'localtime')
+        GROUP BY provider
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    return {row["provider"]: row["count"] for row in rows}
+
+DAILY_LIMITS = {
+    "openai": 100,
+    "anthropic": 50,
+    "tavily": 100,
+}
+
+def check_budget(provider: str) -> tuple[bool, str]:
+    """
+    Returns (allowed, message). If the daily limit for this provider is
+    exceeded, allowed=False and message explains why.
+    """
+    limit = DAILY_LIMITS.get(provider)
+    if limit is None:
+        return True, ""
+
+    current = get_today_call_count(provider)
+    if current >= limit:
+        return False, f"Daily limit reached for {provider} ({current}/{limit}). Try again tomorrow."
+    return True, ""

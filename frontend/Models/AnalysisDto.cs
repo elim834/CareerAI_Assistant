@@ -12,5 +12,7 @@
         public string? Reasoning { get; set; }
         public string? VisaSummary { get; set; }
         public string? SuggestedFocus { get; set; }
+        public List<string>? Risks { get; set; }
+        public List<string>? ActionPlan { get; set; }
     }
 }
