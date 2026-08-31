@@ -57,36 +57,32 @@
         </StackPanel>
         
         <DataGrid x:Name="ApplicationsGrid" Grid.Row="5"
-                  AutoGenerateColumns="False" IsReadOnly="True"
-                  CanUserAddRows="False"
-                  MouseDoubleClick="ApplicationsGrid_MouseDoubleClick">
-            <DataGrid.ContextMenu>
-                <ContextMenu>
-                    <MenuItem Header="Open Details" Click="OpenDetail_Click"/>
-                    <Separator/>
-                    <MenuItem Header="Delete Application" Click="DeleteRow_Click"/>
-                </ContextMenu>
-            </DataGrid.ContextMenu>
-
-            <DataGrid.RowStyle>
-                <Style TargetType="DataGridRow">
-                    <Setter Property="Background" Value="{Binding DaysLeft, Converter={StaticResource UrgencyColorConverter}}"/>
-                </Style>
-            </DataGrid.RowStyle>
-
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Country" Binding="{Binding Country}" Width="80"/>
-                <DataGridTextColumn Header="University" Binding="{Binding University}" Width="180"/>
-                <DataGridTextColumn Header="Program" Binding="{Binding Program}" Width="220"/>
-                <DataGridTextColumn Header="Scholarship" Binding="{Binding ScholarshipAmount}" Width="150"/>
-                <DataGridTextColumn Header="Tuition" Binding="{Binding Tuition}" Width="180"/>
-                <DataGridTextColumn Header="TOEFL" Binding="{Binding ToeflRequirement}" Width="60"/>
-                <DataGridTextColumn Header="Deadline" Binding="{Binding Deadline}" Width="90"/>
-                <DataGridTextColumn Header="Days Left" Binding="{Binding DaysLeftDisplay}" Width="90"/>
-                <DataGridTextColumn Header="Visa" Binding="{Binding VisaCountry}" Width="80"/>
-                <DataGridTextColumn Header="Score" Binding="{Binding AcceptanceScore}" Width="60"/>
-                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="80"/>
-            </DataGrid.Columns>
-        </DataGrid>
+          AutoGenerateColumns="False" IsReadOnly="True"
+          CanUserAddRows="False"
+          MouseDoubleClick="ApplicationsGrid_MouseDoubleClick">
+    <DataGrid.RowStyle>
+        <Style TargetType="DataGridRow">
+            <Setter Property="Background" Value="{Binding DaysLeft, Converter={StaticResource UrgencyColorConverter}}"/>
+        </Style>
+    </DataGrid.RowStyle>
+    <DataGrid.Resources>
+        <Style x:Key="WrapCellStyle" TargetType="TextBlock">
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+    </DataGrid.Resources>
+    <DataGrid.Columns>
+        <DataGridTextColumn Header="Country" Binding="{Binding Country}" Width="Auto" MinWidth="60" MaxWidth="120" ElementStyle="{StaticResource WrapCellStyle}"/>
+        <DataGridTextColumn Header="University" Binding="{Binding University}" Width="Auto" MinWidth="120" MaxWidth="220" ElementStyle="{StaticResource WrapCellStyle}"/>
+        <DataGridTextColumn Header="Program" Binding="{Binding Program}" Width="Auto" MinWidth="150" MaxWidth="280" ElementStyle="{StaticResource WrapCellStyle}"/>
+        <DataGridTextColumn Header="Scholarship" Binding="{Binding ScholarshipAmount}" Width="Auto" MinWidth="100" MaxWidth="220" ElementStyle="{StaticResource WrapCellStyle}"/>
+        <DataGridTextColumn Header="Tuition" Binding="{Binding Tuition}" Width="Auto" MinWidth="100" MaxWidth="220" ElementStyle="{StaticResource WrapCellStyle}"/>
+        <DataGridTextColumn Header="TOEFL" Binding="{Binding ToeflRequirement}" Width="Auto" MinWidth="50"/>
+        <DataGridTextColumn Header="Deadline" Binding="{Binding Deadline}" Width="Auto" MinWidth="80"/>
+        <DataGridTextColumn Header="Days Left" Binding="{Binding DaysLeftDisplay}" Width="Auto" MinWidth="70"/>
+        <DataGridTextColumn Header="Visa" Binding="{Binding VisaCountry}" Width="Auto" MinWidth="60"/>
+        <DataGridTextColumn Header="Score" Binding="{Binding AcceptanceScore}" Width="Auto" MinWidth="50"/>
+        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="Auto" MinWidth="70"/>
+    </DataGrid.Columns>
+</DataGrid>
     </Grid>
 </Window>

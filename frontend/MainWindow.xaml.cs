@@ -4,6 +4,7 @@ using frontend.Services;
 using ClosedXML.Excel;
 using System.Linq;
 
+
 namespace frontend
 {
     public partial class MainWindow : Window
@@ -182,7 +183,36 @@ namespace frontend
             row++;
         }
 
+        // Enable text wrapping so long text doesn't get cut off, and auto-fit row heights
+        var usedRange = sheet.RangeUsed();
+        if (usedRange != null)
+        {
+            usedRange.Style.Alignment.WrapText = true;
+            usedRange.Style.Alignment.Vertical = XLAlignmentVerticalValues.Top;
+        }
+
         sheet.Columns().AdjustToContents();
+
+        // Cap column widths so a single long cell doesn't stretch the whole sheet
+        foreach (var column in sheet.ColumnsUsed())
+        {
+            if (column.Width > 50) column.Width = 50;
+        }
+
+        sheet.Rows().AdjustToContents();
+        
+        // Configure the page so all 13 columns fit on one page width when printed/viewed
+        sheet.PageSetup.PageOrientation = XLPageOrientation.Landscape;
+        sheet.PageSetup.PagesWide = 1;
+        sheet.PageSetup.PagesTall = 0; // 0 = auto (as many pages tall as needed)
+        sheet.PageSetup.Margins.Left = 0.3;
+        sheet.PageSetup.Margins.Right = 0.3;
+        sheet.PageSetup.Margins.Top = 0.4;
+        sheet.PageSetup.Margins.Bottom = 0.4;
+
+        // Freeze the header row so it stays visible while scrolling
+        sheet.SheetView.FreezeRows(1);
+        
         workbook.SaveAs(saveDialog.FileName);
 
         StatusText.Text = $"✅ Exported {applications.Count} application(s) to Excel.";

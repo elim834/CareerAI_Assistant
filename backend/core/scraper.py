@@ -273,7 +273,6 @@ def find_related_links_via_tavily(base_url: str, max_links: int = 3) -> list[str
 
     return links[:max_links]
 
-
 async def fetch_page_text_deep(url: str, max_related: int = 3) -> str:
     """
     Fetches the given page, then automatically discovers and fetches a few
