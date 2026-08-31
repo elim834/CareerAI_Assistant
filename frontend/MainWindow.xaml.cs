@@ -52,6 +52,11 @@ namespace frontend
 
                 var detailWindow = new DetailWindow(selected, analysis, _api) { Owner = this };
                 detailWindow.ShowDialog();
+                
+                if (detailWindow.WasDeleted)
+                {
+                    StatusText.Text = "Application deleted.";
+                }
 
                 var applications = await _api.GetApplicationsAsync();
                 _allApplications = applications;
@@ -210,6 +215,49 @@ namespace frontend
             ApplicationsGrid.ItemsSource = _allApplications
                 .Where(a => a.ApplicationType == "masters" || a.ApplicationType == null)
                 .ToList();
+        }
+        
+        private void OpenDetail_Click(object sender, RoutedEventArgs e)
+        {
+            if (ApplicationsGrid.SelectedItem is frontend.Models.ApplicationDto selected)
+            {
+                // Reuse the existing double-click flow
+                ApplicationsGrid_MouseDoubleClick(sender, null!);
+            }
+        }
+
+        private async void DeleteRow_Click(object sender, RoutedEventArgs e)
+        {
+            if (ApplicationsGrid.SelectedItem is not frontend.Models.ApplicationDto selected)
+                return;
+
+            var result = MessageBox.Show(
+                $"Are you sure you want to delete \"{selected.University} — {selected.Program}\"?",
+                "Confirm Deletion",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result != MessageBoxResult.Yes) return;
+
+            try
+            {
+                StatusText.Text = "Deleting...";
+                var success = await _api.DeleteApplicationAsync(selected.Id);
+                if (!success)
+                {
+                    StatusText.Text = "❌ Delete operation failed.";
+                    return;
+                }
+
+                var applications = await _api.GetApplicationsAsync();
+                _allApplications = applications;
+                ApplicationsGrid.ItemsSource = applications;
+                StatusText.Text = $"🗑️ Deleted. {applications.Count} application(s) remaining.";
+            }
+            catch (Exception ex)
+            {
+                StatusText.Text = $"❌ Delete error: {ex.Message}";
+            }
         }
 
         private void ShowInternshipsButton_Click(object sender, RoutedEventArgs e)

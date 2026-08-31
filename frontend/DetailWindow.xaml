@@ -58,6 +58,10 @@
                 <Button Content="Generate Cover Letter Draft" Padding="15,5" Margin="0,15,0,0"
                         HorizontalAlignment="Left" Click="GenerateCoverLetterButton_Click"/>
             </StackPanel>
+            
+            <Button Content="Delete the application" Padding="15,5" Margin="0,25,10,0"
+                    Background="#FFCDD2"
+                    HorizontalAlignment="Right" Click="DeleteButton_Click"/>
 
             <Button Content="Close" Padding="15,5" Margin="0,25,0,0"
                     HorizontalAlignment="Right" Click="CloseButton_Click"/>

@@ -101,6 +101,12 @@ namespace frontend.Services
             return response.IsSuccessStatusCode;
         }
         
+        public async Task<bool> DeleteApplicationAsync(int applicationId)
+        {
+            var response = await _http.DeleteAsync($"/applications/{applicationId}");
+            return response.IsSuccessStatusCode;
+        }
+        
         public async Task<CoverLetterDto?> GenerateCoverLetterAsync(int applicationId, string? facultyQuery = null)
         {
             var payload = new { faculty_query = facultyQuery };

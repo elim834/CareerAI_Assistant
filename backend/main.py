@@ -1,18 +1,17 @@
 from dotenv import load_dotenv
 load_dotenv()
 
-from dotenv import load_dotenv
-load_dotenv()
 from contextlib import asynccontextmanager
 from pathlib import Path
 import shutil
-from core.scraper import fetch_page_text_smart
+from core.scraper import fetch_page_text_smart, fetch_page_text_deep
 from agents.detective import extract_listing_data, find_and_summarize_faculty
 from core.database import (
     init_db, add_application, get_all_applications,
     save_profile, get_latest_profile, get_application_by_id, update_application_analysis,
-    update_application_status,update_profile_cv_summary,
-    update_application_sub_role,get_usage_summary,update_profile_language_info,
+    update_application_status, update_profile_cv_summary,
+    update_application_sub_role, get_usage_summary, update_profile_language_info,
+    delete_application as db_delete,
 )
 from agents.analyst import analyze_fit, summarize_cv, draft_cover_letter
 from fastapi import FastAPI, UploadFile, File
@@ -128,7 +127,6 @@ async def upload_cv(file: UploadFile = File(...)):
 
 @app.delete("/applications/{application_id}")
 async def delete_application(application_id: int):
-    from core.database import delete_application as db_delete
     db_delete(application_id)
     return {"status": "deleted", "id": application_id}
 
@@ -167,9 +165,9 @@ async def scan_url(payload: dict):
 
     combined_text = ""
     for url in urls:
-        page_text = await fetch_page_text_smart(url)
+        page_text = await fetch_page_text_deep(url)
         if page_text:
-            combined_text += f"\n\n--- Content from {url} ---\n\n{page_text}"
+            combined_text += page_text
 
     if not combined_text.strip():
         return {"error": "Could not fetch or extract text from any of the provided pages"}
@@ -190,7 +188,7 @@ async def scan_url(payload: dict):
                     f"Check the site for the next intake cycle. {existing_notes}"
                 ).strip()
         except ValueError:
-            pass  # deadline wasn't a clean YYYY-MM-DD, skip the check silently
+            pass
 
     new_id = add_application(listing_data)
     return {

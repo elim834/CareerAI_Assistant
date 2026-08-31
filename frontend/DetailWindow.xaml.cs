@@ -95,6 +95,36 @@ namespace frontend
                 if (button != null) button.IsEnabled = true;
             }
         }
+        
+        public bool WasDeleted { get; private set; } = false;
+
+        private async void DeleteButton_Click(object sender, RoutedEventArgs e)
+        {
+            var result = MessageBox.Show(
+                $"Are you sure you want to delete \"{_application.University} — {_application.Program}\"?",
+                "Confirm Deletion",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result != MessageBoxResult.Yes) return;
+
+            var button = sender as Button;
+            if (button != null) button.IsEnabled = false;
+
+            var success = await _api.DeleteApplicationAsync(_application.Id);
+            if (success)
+            {
+                WasDeleted = true;
+                Close();
+            }
+            else
+            {
+                MessageBox.Show("Delete operation failed. Check backend logs.",
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                if (button != null) button.IsEnabled = true;
+            }
+        }
+        
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
             Close();

@@ -60,11 +60,20 @@
                   AutoGenerateColumns="False" IsReadOnly="True"
                   CanUserAddRows="False"
                   MouseDoubleClick="ApplicationsGrid_MouseDoubleClick">
+            <DataGrid.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Open Details" Click="OpenDetail_Click"/>
+                    <Separator/>
+                    <MenuItem Header="Delete Application" Click="DeleteRow_Click"/>
+                </ContextMenu>
+            </DataGrid.ContextMenu>
+
             <DataGrid.RowStyle>
                 <Style TargetType="DataGridRow">
                     <Setter Property="Background" Value="{Binding DaysLeft, Converter={StaticResource UrgencyColorConverter}}"/>
                 </Style>
             </DataGrid.RowStyle>
+
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Country" Binding="{Binding Country}" Width="80"/>
                 <DataGridTextColumn Header="University" Binding="{Binding University}" Width="180"/>
