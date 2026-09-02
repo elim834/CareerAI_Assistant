@@ -11,7 +11,7 @@ from core.database import (
     save_profile, get_latest_profile, get_application_by_id, update_application_analysis,
     update_application_status, update_profile_cv_summary,
     update_application_sub_role, get_usage_summary, update_profile_language_info,
-    delete_application as db_delete,
+    delete_application as db_delete,find_application_by_source_url,
 )
 from agents.analyst import analyze_fit, summarize_cv, draft_cover_letter
 from fastapi import FastAPI, UploadFile, File
@@ -189,6 +189,18 @@ async def scan_url(payload: dict):
                 ).strip()
         except ValueError:
             pass
+
+    primary_url = urls[0]
+    listing_data["source_url"] = primary_url
+
+    existing = find_application_by_source_url(primary_url)
+    if existing:
+        return {
+            "id": existing["id"],
+            "extracted": listing_data,
+            "note": "Bu URL zaten takip listesinde, yeni satır oluşturulmadı.",
+            "duplicate": True,
+        }
 
     new_id = add_application(listing_data)
     return {

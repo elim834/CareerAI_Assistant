@@ -20,44 +20,64 @@ def init_db():
     cursor = conn.cursor()
 
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS applications (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            country TEXT,
-            university TEXT,
-            program TEXT,
-            scholarship_amount TEXT,
-            tuition TEXT,
-            gpa_requirement REAL,
-            toefl_requirement REAL,
-            deadline TEXT,
-            visa_country TEXT,
-            sub_role TEXT,
-            acceptance_score REAL,
-            status TEXT DEFAULT 'new',
-            notes TEXT
-        )
-    """)
-
-    cursor.execute("""
-                   CREATE TABLE IF NOT EXISTS profiles
+                   CREATE TABLE IF NOT EXISTS applications
                    (
                        id
                        INTEGER
                        PRIMARY
                        KEY
                        AUTOINCREMENT,
-                       gpa
+                       country
+                       TEXT,
+                       university
+                       TEXT,
+                       program
+                       TEXT,
+                       scholarship_amount
+                       TEXT,
+                       tuition
+                       TEXT,
+                       gpa_requirement
                        REAL,
-                       courses
-                       TEXT,
-                       cv_summary
-                       TEXT,
-                       education_language
-                       TEXT,
-                       toefl_score
+                       toefl_requirement
                        REAL,
-                       ielts_score
-                       REAL
+                       deadline
+                       TEXT,
+                       visa_country
+                       TEXT,
+                       sub_role
+                       TEXT,
+                       acceptance_score
+                       REAL,
+                       status
+                       TEXT
+                       DEFAULT
+                       'new',
+                       notes
+                       TEXT,
+                       application_type
+                       TEXT,
+                       source_url
+                       TEXT
+                   )
+                   """)
+
+    cursor.execute("""
+                   CREATE TABLE IF NOT EXISTS api_usage
+                   (
+                       id
+                       INTEGER
+                       PRIMARY
+                       KEY
+                       AUTOINCREMENT,
+                       provider
+                       TEXT,
+                       endpoint
+                       TEXT,
+                       timestamp
+                       DATETIME
+                       DEFAULT
+                       CURRENT_TIMESTAMP
                    )
                    """)
 
@@ -74,7 +94,7 @@ def add_application(data: dict) -> int:
     expected_fields = [
         "country", "university", "program", "scholarship_amount", "tuition",
         "gpa_requirement", "toefl_requirement", "deadline", "visa_country",
-        "sub_role", "acceptance_score", "notes", "application_type",
+        "sub_role", "acceptance_score", "notes", "application_type", "source_url",
     ]
     safe_data = {}
     for field in expected_fields:
@@ -88,10 +108,11 @@ def add_application(data: dict) -> int:
     cursor.execute("""
                    INSERT INTO applications
                    (country, university, program, scholarship_amount, tuition, gpa_requirement,
-                    toefl_requirement, deadline, visa_country, sub_role, acceptance_score, notes, application_type)
+                    toefl_requirement, deadline, visa_country, sub_role, acceptance_score, notes,
+                    application_type, source_url)
                    VALUES (:country, :university, :program, :scholarship_amount, :tuition, :gpa_requirement,
                            :toefl_requirement, :deadline, :visa_country, :sub_role, :acceptance_score, :notes,
-                           :application_type)
+                           :application_type, :source_url)
                    """, safe_data)
     conn.commit()
     new_id = cursor.lastrowid
@@ -253,6 +274,14 @@ def get_usage_summary() -> dict:
     rows = cursor.fetchall()
     conn.close()
     return {row["provider"]: row["count"] for row in rows}
+
+def find_application_by_source_url(url: str) -> dict | None:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM applications WHERE source_url = ?", (url,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
 
 DAILY_LIMITS = {
     "openai": 100,

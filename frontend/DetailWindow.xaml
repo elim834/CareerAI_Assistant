@@ -51,6 +51,11 @@
             <TextBlock Text="Program Details" FontWeight="Bold" Margin="0,20,0,2"/>
             <TextBlock x:Name="DetailsText" TextWrapping="Wrap"/>
             
+            <TextBlock Text="Listing" FontWeight="Bold" Margin="0,20,0,2"/>
+            <Button x:Name="OpenListingButton" Content="Open Original Listing"
+                    Padding="10,5" HorizontalAlignment="Left"
+                    Click="OpenListingButton_Click"/>
+            
             <TextBlock Text="Sub Role / Specialization" FontWeight="Bold" Margin="0,20,0,2"/>
             <StackPanel Orientation="Horizontal">
                 <TextBox x:Name="SubRoleTextBox" Width="300" Padding="5"/>

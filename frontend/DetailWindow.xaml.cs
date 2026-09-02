@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using Microsoft.Win32;
 using frontend.Models;
 using frontend.Services;
+using System.Diagnostics;
 
 namespace frontend
 {
@@ -10,6 +11,7 @@ namespace frontend
     {
         private readonly ApplicationDto _application;
         private readonly ApiClient _api;
+        
 
         public DetailWindow(ApplicationDto application, AnalysisDto? analysis, ApiClient api)
         {
@@ -19,6 +21,7 @@ namespace frontend
 
             TitleText.Text = $"{application.University} — {application.Program}";
             SubRoleTextBox.Text = application.SubRole ?? "";
+            OpenListingButton.IsEnabled = !string.IsNullOrWhiteSpace(_application.SourceUrl);
 
             if (analysis != null)
             {
@@ -46,6 +49,12 @@ namespace frontend
                 $"Deadline: {application.Deadline}\n" +
                 $"Visa country: {application.VisaCountry}\n" +
                 $"Status: {application.Status}";
+        }
+        
+        private void OpenListingButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(_application.SourceUrl)) return;
+            Process.Start(new ProcessStartInfo(_application.SourceUrl) { UseShellExecute = true });
         }
 
         private async void SaveSubRoleButton_Click(object sender, RoutedEventArgs e)

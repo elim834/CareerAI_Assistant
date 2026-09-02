@@ -117,6 +117,11 @@ def find_and_summarize_faculty(search_query: str, model: str = "gpt-4o-mini") ->
     Searches the web for a professor/lab (via Tavily), combines the top
     results' content, and summarizes recent research topics via GPT-4o mini.
     """
+    allowed, message = check_budget("openai")
+    if not allowed:
+        print(f"[detective] Budget check failed: {message}")
+        return None
+
     results = search_faculty_pages(search_query)
     if not results:
         return None
@@ -150,6 +155,7 @@ def find_and_summarize_faculty(search_query: str, model: str = "gpt-4o-mini") ->
     try:
         result = json.loads(raw_output)
         result["sources"] = sources
+        log_api_call("openai", "find_and_summarize_faculty")
         return result
     except json.JSONDecodeError:
         print(f"[detective] Could not parse faculty summary output:\n{raw_output}")

@@ -14,7 +14,10 @@ namespace frontend.Services
 
         public ApiClient()
         {
-            _http = new HttpClient { BaseAddress = new Uri(BaseUrl) };
+            _http = new HttpClient
+            {
+                BaseAddress = new Uri(BaseUrl) };
+            
         }
 
         private readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
@@ -83,7 +86,9 @@ namespace frontend.Services
         public async Task<string> ScanUrlAsync(string url)
         {
             var payload = new { url = url };
+            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(3));
             var response = await _http.PostAsJsonAsync("/scan-url", payload);
+
             return await response.Content.ReadAsStringAsync();
         }
         

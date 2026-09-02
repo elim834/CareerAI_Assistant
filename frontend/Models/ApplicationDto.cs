@@ -19,6 +19,7 @@
         public string? LabFitParagraph { get; set; }
         public string? LanguageRequirementStatus { get; set; }
         public string? ApplicationType { get; set; }
+        public string? SourceUrl { get; set; }
 
         // Computed, not from JSON — used for countdown display and color coding
         public int? DaysLeft
