@@ -1,4 +1,4 @@
-
+# CareerAI Assistant
 
 An AI-powered, autonomous academic and career application management platform. It scans 60+ international master's programs, internship listings, and research labs, scores your acceptance chances against your academic profile, drafts cover letter skeletons, and lets you track the whole process in an Excel-like matrix / Kanban board.
 
