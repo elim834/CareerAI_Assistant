@@ -27,17 +27,21 @@ namespace frontend
             {
                 ScoreText.Text = $"{analysis.AcceptanceScore}/10";
                 ReasoningText.Text = analysis.Reasoning ?? "—";
+                LanguageText.Text = FormatLanguageStatus(analysis.LanguageRequirementStatus);
                 VisaText.Text = analysis.VisaSummary ?? "—";
                 FocusText.Text = analysis.SuggestedFocus ?? "—";
                 RisksList.ItemsSource = analysis.Risks ?? new List<string>();
                 ActionPlanList.ItemsSource = analysis.ActionPlan ?? new List<string>();
+                AnalysisTimestampText.Text = FormatAnalysisTimestamp(analysis.AnalyzedAt);
             }
             else
             {
                 ScoreText.Text = application.AcceptanceScore?.ToString() ?? "Not analyzed yet";
                 ReasoningText.Text = application.Notes ?? "—";
+                LanguageText.Text = "—";
                 VisaText.Text = "—";
                 FocusText.Text = "—";
+                AnalysisTimestampText.Text = "Not analyzed yet";
             }
 
             DetailsText.Text =
@@ -85,27 +89,28 @@ namespace frontend
                     return;
                 }
 
-                string keyPoints = letter.KeyPointsToExpand != null
-                    ? string.Join("\n• ", letter.KeyPointsToExpand)
-                    : "";
-
-                MessageBox.Show(
-                    $"OPENING:\n{letter.OpeningParagraph}\n\n" +
-                    $"BODY:\n{letter.BodyParagraph}\n\n" +
-                    $"LAB FIT:\n{letter.LabFitParagraph}\n\n" +
-                    $"CLOSING:\n{letter.ClosingParagraph}\n\n" +
-                    $"YOU SHOULD PERSONALLY ADD:\n• {keyPoints}",
-                    "Cover Letter Draft",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                string appTitle = $"{_application.University} — {_application.Program}";
+                var coverLetterWindow = new CoverLetterWindow(appTitle, letter) { Owner = this };
+                coverLetterWindow.ShowDialog();
             }
             finally
             {
                 if (button != null) button.IsEnabled = true;
             }
-        }
-        
+        }        
         public bool WasDeleted { get; private set; } = false;
+        
+        private string FormatLanguageStatus(string? status)
+        {
+            return status?.ToLowerInvariant() switch
+            {
+                "waived" => "✅ Waived",
+                "met" => "✅ Requirement met",
+                "not met" => "⚠️ Requirement NOT met",
+                "unclear" => "❓ Unclear from listing",
+                _ => "—"
+            };
+        }
 
         private async void DeleteButton_Click(object sender, RoutedEventArgs e)
         {
@@ -130,6 +135,44 @@ namespace frontend
             {
                 MessageBox.Show("Delete operation failed. Check backend logs.",
                     "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                if (button != null) button.IsEnabled = true;
+            }
+        }
+        
+        private string FormatAnalysisTimestamp(string? isoTimestamp)
+        {
+            if (string.IsNullOrWhiteSpace(isoTimestamp)) return "Not analyzed yet";
+            if (DateTime.TryParse(isoTimestamp, out var dt))
+                return $"Last analyzed: {dt:dddd, MMMM d, yyyy 'at' HH:mm}";
+            return "";
+        }
+        
+        private async void RunNewAnalysisButton_Click(object sender, RoutedEventArgs e)
+        {
+            var button = sender as Button;
+            if (button != null) button.IsEnabled = false;
+
+            try
+            {
+                var freshAnalysis = await _api.AnalyzeApplicationAsync(_application.Id);
+                if (freshAnalysis == null)
+                {
+                    MessageBox.Show("Could not produce a new analysis. Check backend logs.",
+                        "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                ScoreText.Text = $"{freshAnalysis.AcceptanceScore}/10";
+                ReasoningText.Text = freshAnalysis.Reasoning ?? "—";
+                LanguageText.Text = FormatLanguageStatus(freshAnalysis.LanguageRequirementStatus);
+                VisaText.Text = freshAnalysis.VisaSummary ?? "—";
+                FocusText.Text = freshAnalysis.SuggestedFocus ?? "—";
+                RisksList.ItemsSource = freshAnalysis.Risks ?? new List<string>();
+                ActionPlanList.ItemsSource = freshAnalysis.ActionPlan ?? new List<string>();
+                AnalysisTimestampText.Text = $"Last analyzed: {DateTime.Now:dddd, MMMM d, yyyy 'at' HH:mm} (just now)";
+            }
+            finally
+            {
                 if (button != null) button.IsEnabled = true;
             }
         }

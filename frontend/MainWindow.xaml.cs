@@ -3,6 +3,10 @@ using Microsoft.Win32;
 using frontend.Services;
 using ClosedXML.Excel;
 using System.Linq;
+using System.Text.Json;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
 
 
 namespace frontend
@@ -47,13 +51,14 @@ namespace frontend
 
             try
             {
-                StatusText.Text = $"Analyzing \"{selected.Program}\"...";
+                StatusText.Text = $"Loading \"{selected.Program}\"...";
 
-                var analysis = await _api.AnalyzeApplicationAsync(selected.Id);
+                var lastAnalysisResponse = await _api.GetLastAnalysisAsync(selected.Id);
+                var analysis = lastAnalysisResponse?.Analysis; // may be null if never analyzed
 
                 var detailWindow = new DetailWindow(selected, analysis, _api) { Owner = this };
                 detailWindow.ShowDialog();
-                
+
                 if (detailWindow.WasDeleted)
                 {
                     StatusText.Text = "Application deleted.";
@@ -66,10 +71,9 @@ namespace frontend
             }
             catch (Exception ex)
             {
-                StatusText.Text = $"❌ Analysis failed: {ex.Message}";
+                StatusText.Text = $"❌ Failed to load: {ex.Message}";
             }
         }        
-        
         private async void UploadTranscriptButton_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new OpenFileDialog { Filter = "PDF files (*.pdf)|*.pdf" };
@@ -297,6 +301,32 @@ namespace frontend
                 .ToList();
         }
         
+        private void HomeButton_Click(object sender, RoutedEventArgs e)
+        {
+            var dashboard = new DashboardWindow();
+            dashboard.Show();
+            Close();
+        }
+        private void FacultyResearchButton_Click(object sender, RoutedEventArgs e)
+        {
+            var window = new FacultyResearchWindow();
+            window.Show();
+        }
+        
+        private void ApplicationsGrid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            var dep = (DependencyObject)e.OriginalSource;
+            while (dep != null && dep is not DataGridRow)
+            {
+                dep = VisualTreeHelper.GetParent(dep);
+            }
+
+            if (dep is DataGridRow row)
+            {
+                row.IsSelected = true;
+                ApplicationsGrid.SelectedItem = row.Item;
+            }
+        }
         
     }
 }

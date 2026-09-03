@@ -22,12 +22,16 @@
                    Text="Connecting to backend..."/>
 
         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+            <Button x:Name="HomeButton" Content="🏠 Home" Padding="10,5" Margin="0,0,10,0"
+                    Click="HomeButton_Click"/>
             <Button x:Name="UploadTranscriptButton" Content="Upload Transcript"
                     Padding="10,5" Margin="0,0,10,0"
                     Click="UploadTranscriptButton_Click"/>
             <Button x:Name="UploadCvButton" Content="Upload CV"
                     Padding="10,5"
                     Click="UploadCvButton_Click"/>
+            <Button x:Name="FacultyResearchButton" Content="🔬 Faculty Research"
+                    Padding="10,5" Click="FacultyResearchButton_Click"/>
         </StackPanel>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10">
@@ -59,7 +63,8 @@
         <DataGrid x:Name="ApplicationsGrid" Grid.Row="5"
           AutoGenerateColumns="False" IsReadOnly="True"
           CanUserAddRows="False"
-          MouseDoubleClick="ApplicationsGrid_MouseDoubleClick">
+          MouseDoubleClick="ApplicationsGrid_MouseDoubleClick"
+          PreviewMouseRightButtonDown="ApplicationsGrid_PreviewMouseRightButtonDown">
     <DataGrid.RowStyle>
         <Style TargetType="DataGridRow">
             <Setter Property="Background" Value="{Binding DaysLeft, Converter={StaticResource UrgencyColorConverter}}"/>

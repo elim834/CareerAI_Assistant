@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -112,6 +113,24 @@ namespace frontend.Services
             return response.IsSuccessStatusCode;
         }
         
+        public async Task<ProfileDto?> GetProfileAsync()
+        {
+            var response = await _http.GetAsync("/profile");
+            if (!response.IsSuccessStatusCode) return null;
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<ProfileDto>(json, _jsonOptions);
+        }
+        
+        public async Task<LastAnalysisResponse?> GetLastAnalysisAsync(int applicationId)
+        {
+            var response = await _http.GetAsync($"/applications/{applicationId}/last-analysis");
+            if (!response.IsSuccessStatusCode)
+                return null;
+
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<LastAnalysisResponse>(json, _jsonOptions);
+        }
+        
         public async Task<CoverLetterDto?> GenerateCoverLetterAsync(int applicationId, string? facultyQuery = null)
         {
             var payload = new { faculty_query = facultyQuery };
@@ -122,5 +141,18 @@ namespace frontend.Services
             var json = await response.Content.ReadAsStringAsync();
             var result = JsonSerializer.Deserialize<CoverLetterResponse>(json, _jsonOptions);
             return result?.Letter;
-        }    }
+        }    
+        
+        public async Task<FacultyResearchDto?> SearchFacultyResearchAsync(string query)
+        {
+            var payload = new { query = query };
+            var response = await _http.PostAsJsonAsync("/faculty-research/search", payload);
+            if (!response.IsSuccessStatusCode)
+                return null;
+
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<FacultyResearchDto>(json, _jsonOptions);
+        }
+        
+    }
 }

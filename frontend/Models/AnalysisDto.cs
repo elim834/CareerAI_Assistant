@@ -14,5 +14,13 @@
         public string? SuggestedFocus { get; set; }
         public List<string>? Risks { get; set; }
         public List<string>? ActionPlan { get; set; }
+        public string? LanguageRequirementStatus { get; set; }
+        public string? AnalyzedAt { get; set; }
+    }
+    
+    public class LastAnalysisResponse
+    {
+        public bool Analyzed { get; set; }
+        public AnalysisDto? Analysis { get; set; }
     }
 }

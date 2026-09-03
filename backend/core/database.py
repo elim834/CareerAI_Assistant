@@ -1,6 +1,7 @@
 import sqlite3
 from pathlib import Path
 import json
+from datetime import datetime
 
 
 # core/database.py -> core -> backend -> CareerAI_Assistant -> database/
@@ -80,6 +81,15 @@ def init_db():
                        CURRENT_TIMESTAMP
                    )
                    """)
+
+    for column, col_type in [
+        ("analyzed_at", "TEXT"),
+        ("last_analysis_json", "TEXT"),
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE applications ADD COLUMN {column} {col_type}")
+        except sqlite3.OperationalError:
+            pass  # column already exists
 
     conn.commit()
     conn.close()
@@ -193,17 +203,56 @@ def get_application_by_id(app_id: int) -> dict | None:
     conn.close()
     return dict(row) if row else None
 
-def update_application_analysis(app_id: int, acceptance_score: float, notes: str) -> None:
-    """Writes the analyst's score and reasoning back onto an existing application row."""
+def update_application_analysis(app_id: int, analysis: dict) -> None:
+    """
+    Caches the full analysis result (score, reasoning, visa summary, risks,
+    action plan, etc.) plus a timestamp, so the app can show "last analysis"
+    without re-calling the model every time the user opens a row.
+    """
     conn = get_connection()
     cursor = conn.cursor()
+
+    combined_notes = (
+        f"{analysis.get('reasoning', '')} | "
+        f"Visa: {analysis.get('visa_summary', '')} | "
+        f"Focus: {analysis.get('suggested_focus', '')}"
+    )
+
     cursor.execute("""
         UPDATE applications
-        SET acceptance_score = :score, notes = :notes
+        SET acceptance_score = :acceptance_score,
+            notes = :notes,
+            analyzed_at = :analyzed_at,
+            last_analysis_json = :last_analysis_json
         WHERE id = :id
-    """, {"score": acceptance_score, "notes": notes, "id": app_id})
+    """, {
+        "acceptance_score": analysis.get("acceptance_score"),
+        "notes": combined_notes,
+        "analyzed_at": datetime.now().isoformat(),
+        "last_analysis_json": json.dumps(analysis, ensure_ascii=False),
+        "id": app_id,
+    })
     conn.commit()
     conn.close()
+
+
+def get_last_analysis(app_id: int) -> dict | None:
+    """Returns the cached analysis + timestamp for an application, or None if never analyzed."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT analyzed_at, last_analysis_json FROM applications WHERE id = ?",
+        (app_id,),
+    )
+    row = cursor.fetchone()
+    conn.close()
+
+    if not row or not row["last_analysis_json"]:
+        return None
+
+    analysis = json.loads(row["last_analysis_json"])
+    analysis["analyzed_at"] = row["analyzed_at"]
+    return analysis
 
 def update_profile_cv_summary(profile_id: int, cv_summary: str) -> None:
     """Attaches a CV summary to an existing profile row."""

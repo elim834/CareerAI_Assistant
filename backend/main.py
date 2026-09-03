@@ -6,13 +6,7 @@ from pathlib import Path
 import shutil
 from core.scraper import fetch_page_text_smart, fetch_page_text_deep
 from agents.detective import extract_listing_data, find_and_summarize_faculty
-from core.database import (
-    init_db, add_application, get_all_applications,
-    save_profile, get_latest_profile, get_application_by_id, update_application_analysis,
-    update_application_status, update_profile_cv_summary,
-    update_application_sub_role, get_usage_summary, update_profile_language_info,
-    delete_application as db_delete,find_application_by_source_url,
-)
+from core import database as db
 from agents.analyst import analyze_fit, summarize_cv, draft_cover_letter
 from fastapi import FastAPI, UploadFile, File
 from core.parser import parse_transcript, extract_text_from_pdf
@@ -22,7 +16,7 @@ from datetime import date
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    init_db()
+    db.init_db()
     yield
 
 
@@ -38,12 +32,19 @@ async def root():
 
 @app.post("/applications")
 async def create_application(data: dict):
-    new_id = add_application(data)
+    new_id = db.add_application(data)
     return {"id": new_id, "status": "created"}
 
 @app.get("/applications")
 async def list_applications():
-    return get_all_applications()
+    return db.get_all_applications()
+
+@app.get("/profile")
+async def get_profile():
+    profile = db.get_latest_profile()
+    if not profile:
+        return {"error": "No profile found."}
+    return profile
 
 @app.post("/profile/upload-pdf")
 async def upload_pdf(file: UploadFile = File(...)):
@@ -56,7 +57,7 @@ async def upload_pdf(file: UploadFile = File(...)):
     result = parse_transcript(str(temp_path))
 
     # Save to profiles table
-    profile_id = save_profile(gpa=result["gpa"], courses=result["courses"])
+    profile_id = db.save_profile(gpa=result["gpa"], courses=result["courses"])
 
     # Clean up the temp file
     temp_path.unlink()
@@ -70,11 +71,11 @@ async def upload_pdf(file: UploadFile = File(...)):
 
 @app.post("/analyze/{application_id}")
 async def analyze_application(application_id: int):
-    application = get_application_by_id(application_id)
+    application = db.get_application_by_id(application_id)
     if not application:
         return {"error": f"No application found with id {application_id}"}
 
-    profile = get_latest_profile()
+    profile = db.get_latest_profile()
     if not profile:
         return {"error": "No profile found. Upload a transcript first."}
 
@@ -93,14 +94,18 @@ async def analyze_application(application_id: int):
     if analysis is None:
         return {"error": "Model could not produce a valid analysis"}
 
-    combined_notes = f"{analysis.get('reasoning', '')} | Visa: {analysis.get('visa_summary', '')} | Focus: {analysis.get('suggested_focus', '')}"
-    update_application_analysis(
-        app_id=application_id,
-        acceptance_score=analysis.get("acceptance_score"),
-        notes=combined_notes,
-    )
+    db.update_application_analysis(app_id=application_id, analysis=analysis)
 
     return {"application_id": application_id, "analysis": analysis}
+
+
+@app.get("/applications/{application_id}/last-analysis")
+async def get_cached_analysis(application_id: int):
+    """Returns the cached analysis result without calling the model again."""
+    analysis = db.get_last_analysis(application_id)
+    if analysis is None:
+        return {"analyzed": False}
+    return {"analyzed": True, "analysis": analysis}
 
 @app.post("/profile/upload-cv")
 async def upload_cv(file: UploadFile = File(...)):
@@ -118,21 +123,21 @@ async def upload_cv(file: UploadFile = File(...)):
     if summary is None:
         return {"error": "Could not summarize CV"}
 
-    profile = get_latest_profile()
+    profile = db.get_latest_profile()
     if not profile:
         return {"error": "No profile found. Upload a transcript first."}
 
-    update_profile_cv_summary(profile["id"], summary)
+    db.update_profile_cv_summary(profile["id"], summary)
     return {"profile_id": profile["id"], "cv_summary": summary}
 
 @app.delete("/applications/{application_id}")
 async def delete_application(application_id: int):
-    db_delete(application_id)
+    db.db_delete(application_id)
     return {"status": "deleted", "id": application_id}
 
 @app.get("/applications/{application_id}")
 async def get_single_application(application_id: int):
-    application = get_application_by_id(application_id)
+    application = db.get_application_by_id(application_id)
     if not application:
         return {"error": f"No application found with id {application_id}"}
     return application
@@ -142,7 +147,7 @@ async def change_status(application_id: int, payload: dict):
     new_status = payload.get("status")
     if not new_status:
         return {"error": "status field is required"}
-    update_application_status(application_id, new_status)
+    db.update_application_status(application_id, new_status)
     return {"id": application_id, "status": new_status}
 
 @app.patch("/applications/{application_id}/sub-role")
@@ -150,7 +155,7 @@ async def change_sub_role(application_id: int, payload: dict):
     new_sub_role = payload.get("sub_role")
     if not new_sub_role:
         return {"error": "sub_role field is required"}
-    update_application_sub_role(application_id, new_sub_role)
+    db.update_application_sub_role(application_id, new_sub_role)
     return {"id": application_id, "sub_role": new_sub_role}
 
 @app.post("/scan-url")
@@ -193,7 +198,7 @@ async def scan_url(payload: dict):
     primary_url = urls[0]
     listing_data["source_url"] = primary_url
 
-    existing = find_application_by_source_url(primary_url)
+    existing = db.find_application_by_source_url(primary_url)
     if existing:
         return {
             "id": existing["id"],
@@ -202,7 +207,7 @@ async def scan_url(payload: dict):
             "duplicate": True,
         }
 
-    new_id = add_application(listing_data)
+    new_id = db.add_application(listing_data)
     return {
         "id": new_id,
         "extracted": listing_data,
@@ -211,11 +216,11 @@ async def scan_url(payload: dict):
 
 @app.post("/cover-letter/{application_id}")
 async def generate_cover_letter(application_id: int, payload: dict = None):
-    application = get_application_by_id(application_id)
+    application = db.get_application_by_id(application_id)
     if not application:
         return {"error": f"No application found with id {application_id}"}
 
-    profile = get_latest_profile()
+    profile = db.get_latest_profile()
     if not profile:
         return {"error": "No profile found. Upload a transcript first."}
 
@@ -253,15 +258,15 @@ async def search_faculty_research(payload: dict):
 
 @app.get("/usage")
 async def usage_summary():
-    return get_usage_summary()
+    return db.get_usage_summary()
 
 @app.patch("/profile/language")
 async def update_language_info(payload: dict):
-    profile = get_latest_profile()
+    profile = db.get_latest_profile()
     if not profile:
         return {"error": "No profile found. Upload a transcript first."}
 
-    update_profile_language_info(
+    db.update_profile_language_info(
         profile_id=profile["id"],
         education_language=payload.get("education_language"),
         toefl_score=payload.get("toefl_score"),
